@@ -1,21 +1,147 @@
 <html>
 	<head>
 		<link rel="stylesheet" href="cssReset.css">
-		<script src="phaser.min.js"></script>
+		<script src="phaser.js"></script>
 		<style>
 
 		</style>
 	</head>
 	<body>
-
 		<script>
-			var game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+			const game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+
+			var daysSinceStart = 0;
+			const gameState = {
+				happiness: 20,
+				money: 250000,
+				connections: 0,
+				daysTillDeath: 365,
+				injured: false,
+				sport: undefined,
+				lossRate: 1
+			};
+
+			var activities;
+			var sports;
+			var investments;
 
 			function preload() {
 				game.load.image('IDLogo', './VodLogo.png');
+				game.load.json('activities', './activities.json');
+				game.load.json('sports', './sports.json');
+				game.load.json('investments', './investments.json');
+			}
+			/**
+				"stockOption1": {
+					"cost": 10,
+					"extendLife": 0,
+					"name": "Stock Option 1",
+					"balance": 0,
+					"baseInterestRate": 0.05,
+					"risk": 0.2
+				},
+			**/
+			function invest(option, amount) {
+				let x = investments[option];
+				gameState.money -= x.cost * amount;
+				x.balance += x.cost * amount;
+			}
+
+			function withdraw(option, amount) {
+				let x = investments[option];
+				gameState.money += Math.min(x.balance, amount);
+				x.balance -= Math.min(x.balance, amount);
+			}
+
+			/**
+				"visitBar": {
+					"cost": 10,
+					"novelty": 2,
+					"baseHappiness": 0,
+					"social": 3,
+					"numCompleted": 0,
+					"time": 1,
+					"extendLife": -1,
+					"rewarding": 2,
+					"name": "Visit and Meet People at Local Bar"
+				}
+
+				HappinessFromActivity = Happiness Value + (Novelty / Number of times completed)
+																+ (Number of times completed / Connections || 0)
+			**/
+
+			function performActivity(activity) {
+				let x = activities[activity];
+				gameState.money -= x.cost;
+				let happiness = x.baseHappiness
+												+ (x.novelty / (x.numCompleted + 1))
+												+ (x.numCompleted / x.social)
+												+ (x.rewarding ? (x.numCompleted/4) / x.rewarding : 0);
+				if(x.deviation) {
+					let random = Math.random();
+					happiness += (random < x.devBounds[0] ? -x.deviation : (random > x.devBounds[1] ? x.deviation : 0));
+				}
+				gameState.happiness += happiness;
+				++x.numCompleted;
+				passTime(x.time);
+			}
+
+			/**
+				"soccer": {
+					"cost": 5,
+					"novelty": 3,
+					"baseHappiness": 2,
+					"social": 3,
+					"numCompleted": 0,
+					"time": 1,
+					"extendLife": 0.25,
+					"rewarding": 5,
+					"injuryChance": 0.05,
+					"name": "Soccer"
+				},
+			**/
+
+			function playSport(sport) {
+				let x = sports[sport];
+				gameState.money -= x.cost;
+				if(gameState.injured || Math.random() < x.injuryChance) {
+					gameState.injured = true;
+				} else {
+					let happiness = x.baseHappiness
+													+ (x.novelty / (x.numCompleted + 1))
+													+ (x.numCompleted / x.social)
+													+ (x.rewarding ? (x.numCompleted/4) / x.rewarding : 0);
+					gameState.happiness += happiness;
+				}
+				++x.numCompleted;
+				passTime(1);
+			}
+
+			function passTime(days) {
+				++daysSinceStart;
+				--gameState.daysTillDeath;
+				gameState.lossRate = 300 / gameState.daysTillDeath;
+				gameState.happiness -= gameState.lossRate / days;
+				if(gameState.happiness > 1000) {
+					console.log(daysSinceStart);
+				}
+				gameState.daysTillDeath += investments['research'].extendLife * (investments['research'].balance / investments['research'].cost);
+				investments['research'].balance = 0;
+				for(let i = 1, l = Object.keys(investments).length; i < l; ++i) {
+					let key = Object.keys(investments)[i];
+					if(!investments[key].permanent) {
+						investments[key].balance += investments[key].balance * (Math.random() - investments[key].risk) * investments[key].baseInterestRate;
+					}
+				}
+				if(days > 1) {
+					passTime(days - 1);
+				}
 			}
 
 			function create() {
+				activities = game.cache.getJSON('activities');
+				sports = game.cache.getJSON('sports');
+				investments = game.cache.getJSON('investments');
 				logo = game.add.sprite(0, 0, 'IDLogo');
 				logo.age = 120;
 				leftKey = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);

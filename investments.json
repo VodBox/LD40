@@ -1,0 +1,25 @@
+{
+	"research": {
+		"cost": 1000,
+		"extendLife": 0.25,
+		"name": "Medical Research",
+		"balance": 0,
+		"permanent": true
+	},
+	"stockOption1": {
+		"cost": 1000,
+		"extendLife": 0,
+		"name": "Stock Option 1",
+		"balance": 0,
+		"baseInterestRate": 0.01,
+		"risk": 0.2
+	},
+	"stockOption2": {
+		"cost": 500,
+		"extendLife": 0,
+		"name": "Stock Option 2",
+		"balance": 0,
+		"baseInterestRate": 0.007,
+		"risk": 0.1
+	}
+}

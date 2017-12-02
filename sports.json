@@ -1,0 +1,62 @@
+{
+	"curling": {
+		"cost": 10,
+		"novelty": 5,
+		"baseHappiness": 2,
+		"social": 3,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0.125,
+		"rewarding": 5,
+		"injuryChance": 0.025,
+		"name": "Curling"
+	},
+	"soccer": {
+		"cost": 5,
+		"novelty": 3,
+		"baseHappiness": 2,
+		"social": 3,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0.25,
+		"rewarding": 5,
+		"injuryChance": 0.05,
+		"name": "Soccer"
+	},
+	"baseball": {
+		"cost": 7,
+		"novelty": 3,
+		"baseHappiness": 2,
+		"social": 5,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0.125,
+		"rewarding": 5,
+		"injuryChance": 0.025,
+		"name": "Baseball"
+	},
+	"rugby": {
+		"cost": 5,
+		"novelty": 4,
+		"baseHappiness": 2,
+		"social": 3,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0.25,
+		"rewarding": 6,
+		"injuryChance": 0.08,
+		"name": "Rugby"
+	},
+	"iceHockey": {
+		"cost": 10,
+		"novelty": 5,
+		"baseHappiness": 2,
+		"social": 3,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0.25,
+		"rewarding": 8,
+		"injuryChance": 0.1,
+		"name": "Ice Hockey"
+	}
+}

@@ -1,0 +1,136 @@
+{
+	"cruise": {
+		"cost": 8000,
+		"novelty": 12,
+		"baseHappiness": 4,
+		"social": 10,
+		"numCompleted": 0,
+		"time": 14,
+		"extendLife": 0,
+		"rewarding": 0,
+		"name": "Go on a Cruise for 2 Weeks"
+	},
+	"beachHouse": {
+		"cost": 3000,
+		"novelty": 9,
+		"baseHappiness": 3,
+		"social": 100,
+		"numCompleted": 0,
+		"time": 7,
+		"extendLife": 0,
+		"rewarding": 0,
+		"name": "Visit Beach House for a Week"
+	},
+	"jetpacking": {
+		"cost": 3000,
+		"novelty": 13,
+		"baseHappiness": 2,
+		"social": 100,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0,
+		"rewarding": 0,
+		"name": "Rent a Jetpack for a Day"
+	},
+	"restaraunt": {
+		"cost": 120,
+		"novelty": 5,
+		"baseHappiness": 4,
+		"social": 100,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0,
+		"rewarding": 0,
+		"name": "Go to a Fancy Restaraunt"
+	},
+	"privateJet": {
+		"cost": 15000,
+		"novelty": 10,
+		"baseHappiness": 3,
+		"social": 100,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0,
+		"rewarding": 0,
+		"name": "Rent a Private Jet for a Day"
+	},
+	"safari": {
+		"cost": 2700,
+		"novelty": 12,
+		"baseHappiness": 2,
+		"social": 100,
+		"numCompleted": 0,
+		"time": 3,
+		"extendLife": 0,
+		"rewarding": 0,
+		"name": "Go on a 3 Day Safari Tour"
+	},
+	"raceCar": {
+		"cost": 400,
+		"novelty": 8,
+		"baseHappiness": 1,
+		"social": 100,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0,
+		"rewarding": 0,
+		"name": "Rent a Racecar for a Day"
+	},
+	"visitBar": {
+		"cost": 10,
+		"novelty": 2,
+		"baseHappiness": 0,
+		"social": 10,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": -1,
+		"rewarding": 2,
+		"name": "Visit and Meet People at Local Bar"
+	},
+	"club": {
+		"cost": 20,
+		"novelty": 4,
+		"baseHappiness": 1,
+		"social": 8,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0,
+		"rewarding": 3,
+		"name": "Participate in a Club"
+	},
+	"surfInternet": {
+		"cost": 0,
+		"novelty": 0,
+		"baseHappiness": 2,
+		"social": 30,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0,
+		"rewarding": 0,
+		"name": "Surf the Internet"
+	},
+	"cinema": {
+		"cost": 15,
+		"novelty": 3,
+		"baseHappiness": 3,
+		"social": 100,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0,
+		"rewarding": 0,
+		"name": "Go to the Cinema",
+		"deviation": 3,
+		"devBounds": [0.1, 0.8]
+	},
+	"gym": {
+		"cost": 5,
+		"novelty": 0,
+		"baseHappiness": 1,
+		"social": 100,
+		"numCompleted": 0,
+		"time": 1,
+		"extendLife": 0.25,
+		"rewarding": 8,
+		"name": "Go to the Gym"
+	}
+}
