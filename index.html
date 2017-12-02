@@ -8,7 +8,10 @@
 	</head>
 	<body>
 		<script>
-			const game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+			const canvasWidth = 1280;
+			const canvasHeight = 720;
+
+			const game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update, backgroundColor: 0x00FF00 });
 
 			var daysSinceStart = 0;
 			const gameState = {
@@ -27,6 +30,7 @@
 
 			function preload() {
 				game.load.image('IDLogo', './VodLogo.png');
+				game.load.image('Background', './Background.png');
 				game.load.json('activities', './activities.json');
 				game.load.json('sports', './sports.json');
 				game.load.json('investments', './investments.json');
@@ -142,6 +146,10 @@
 				activities = game.cache.getJSON('activities');
 				sports = game.cache.getJSON('sports');
 				investments = game.cache.getJSON('investments');
+				game.stage.backgroundColor = 0x80E0F1;
+				background = game.add.sprite(0, 0, 'Background');
+				background.width = canvasWidth;
+				background.height = canvasHeight;
 				logo = game.add.sprite(0, 0, 'IDLogo');
 				logo.age = 120;
 				leftKey = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
