@@ -11,7 +11,7 @@
 			const canvasWidth = 1280;
 			const canvasHeight = 720;
 
-			const game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update, backgroundColor: 0x00FF00 });
+			const game = new Phaser.Game(1280, 720, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 
 			var daysSinceStart = 0;
 			const gameState = {
@@ -31,6 +31,7 @@
 			function preload() {
 				game.load.image('IDLogo', './VodLogo.png');
 				game.load.image('Background', './Background.png');
+				game.load.image('Grid', './GridBase.png');
 				game.load.json('activities', './activities.json');
 				game.load.json('sports', './sports.json');
 				game.load.json('investments', './investments.json');
@@ -142,6 +143,22 @@
 				}
 			}
 
+			function inside(point, vs) {
+				var x = point[0], y = point[1];
+				var inside = false;
+				for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+						var xi = vs[i][0], yi = vs[i][1];
+						var xj = vs[j][0], yj = vs[j][1];
+
+						var intersect = ((yi > y) != (yj > y))
+								&& (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+						if (intersect) inside = !inside;
+				}
+				return inside;
+			};
+
+			var frameNo = 0;
+
 			function create() {
 				activities = game.cache.getJSON('activities');
 				sports = game.cache.getJSON('sports');
@@ -150,6 +167,13 @@
 				background = game.add.sprite(0, 0, 'Background');
 				background.width = canvasWidth;
 				background.height = canvasHeight;
+				grid = game.add.sprite(0, 0, 'Grid');
+				grid.width = canvasWidth;
+				grid.height = canvasHeight;
+				centerPoint = game.add.graphics();
+				centerPoint.beginFill(0xff0000);
+				centerPoint.drawCircle(0, 0, 5);
+				centerPoint.endFill();
 				logo = game.add.sprite(0, 0, 'IDLogo');
 				logo.age = 120;
 				leftKey = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
@@ -169,8 +193,33 @@
 				iterate();
 			}
 
-		function iterate() {
+		var activeX = -1;
+		var activeY = -1;
 
+		function iterate() {
+			frameNo++;
+			for(let x = 0; x < 10; ++x) {
+				for(let y = 0; y < 10; ++y) {
+					let startX = 640 + 50.4*x - 50.4*y;
+					let startY = 233 + 22.6*y + 22.6*x;
+					let points = [
+						[startX, startY],
+						[startX + 50.4, startY + 22.6],
+						[startX, startY + 45.2],
+						[startX - 50.4, startY + 22.6],
+						[startX, startY]
+					];
+					if(inside([game.input.mousePointer.clientX, game.input.mousePointer.clientY], points)) {
+						activeX = x;
+						activeY = y;
+					}
+				}
+			}
+			if(game.input.mousePointer.isDown) {
+				console.log([game.input.mousePointer.clientX, game.input.mousePointer.clientY]);
+				console.log([activeX, activeY]);
+			}
+			game.stage.backgroundColor = Phaser.Color.interpolateColor(0x80E0F1, 0x2C4A4F, 900, Math.min(frameNo, 900));
 		}
 
 			var logoVisible = true;
