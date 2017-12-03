@@ -244,7 +244,7 @@
 						type: "end",
 						message: "In your short time left on earth, you've reached happiness through hardwork, determination and a willingness to connect with other people. What was that money all worth, when the simplest things can bring happiness?"
 					};
-				} else if(gameState.happiness < 0 || gameState.daysTillDeath == 0) {
+				} else if(gameState.happiness < 0 || gameState.daysTillDeath == 0 || gameState.money < 0) {
 					notificationQueue[notificationQueue.length] = {
 						title: "Congratulations,",
 						type: "end",
@@ -398,6 +398,9 @@
 				happiness = game.add.text(20, 20, "Happiness: " + Math.floor(gameState.happiness), statsStyle);
 				daysLeft = game.add.text(20, 50, "Days Left: " + Math.floor(gameState.daysTillDeath), statsStyle);
 				money = game.add.text(20, 80, "Money: $" + Math.floor(gameState.money), statsStyle);
+				happiness.alpha = 0;
+				daysLeft.alpha = 0;
+				money.alpha = 0;
 				investmentGroup = createInvestmentGroup();
 				investmentGroup.visible = false;
 				activityGroup = createActivitiesGroup();
@@ -405,7 +408,8 @@
 				sportGroup = createSportGroup();
 				sportGroup.visible = false;
 				notificationGroup = createNotificationGroup();
-				currentScreen = notificationGroup;
+				notificationGroup.visible = false;
+				//currentScreen = notificationGroup;
 				logo = game.add.sprite(0, 0, 'IDLogo');
 				logo.age = 120;
 				leftKey = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
