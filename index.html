@@ -243,7 +243,13 @@
 						title: "Congratulations,",
 						type: "end",
 						message: "In your short time left on earth, you've reached happiness through hardwork, determination and a willingness to connect with other people. What was that money all worth, when the simplest things can bring happiness?"
-					}
+					};
+				} else if(gameState.happiness < 0 || gameState.daysTillDeath == 0) {
+					notificationQueue[notificationQueue.length] = {
+						title: "Congratulations,",
+						type: "end",
+						message: "You died a miserable failure. If only there was something or someone you could have connected with. Unfortunately, no one will miss you. What a shame."
+					};
 				}
 				animLocked = true;
 				animFrames = 0;
