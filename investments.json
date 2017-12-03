@@ -21,5 +21,13 @@
 		"balance": 0,
 		"baseInterestRate": 0.007,
 		"risk": 0.1
+	},
+	"riskyOption": {
+		"cost": 5000,
+		"extendLife": 0,
+		"name": "Risky Option",
+		"balance": 0,
+		"baseInterestRate": 0.05,
+		"risk": 0.5
 	}
 }

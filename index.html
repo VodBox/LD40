@@ -8,6 +8,57 @@
 	</head>
 	<body>
 		<script>
+			(function(window,document) {
+				var prefix = "", _addEventListener, support;
+
+				if ( window.addEventListener ) {
+					_addEventListener = "addEventListener";
+				} else {
+					_addEventListener = "attachEvent";
+					prefix = "on";
+				}
+
+				support = "onwheel" in document.createElement("div") ? "wheel" : // Modern browsers support "wheel"
+				document.onmousewheel !== undefined ? "mousewheel" : // Webkit and IE support at least "mousewheel"
+				"DOMMouseScroll"; // let's assume that remaining browsers are older Firefox
+
+				window.addWheelListener = function( elem, callback, useCapture ) {
+					_addWheelListener( elem, support, callback, useCapture );
+					if( support == "DOMMouseScroll" ) {
+						_addWheelListener( elem, "MozMousePixelScroll", callback, useCapture );
+					}
+				};
+
+				function _addWheelListener( elem, eventName, callback, useCapture ) {
+					elem[ _addEventListener ]( prefix + eventName, support == "wheel" ? callback : function( originalEvent ) {
+						!originalEvent && ( originalEvent = window.event );
+
+						var event = {
+							originalEvent: originalEvent,
+							target: originalEvent.target || originalEvent.srcElement,
+							type: "wheel",
+							deltaMode: originalEvent.type == "MozMousePixelScroll" ? 0 : 1,
+							deltaX: 0,
+							deltaY: 0,
+							deltaZ: 0,
+							preventDefault: function() {
+							originalEvent.preventDefault ?
+								originalEvent.preventDefault() :
+								originalEvent.returnValue = false;
+							}
+						};
+
+						if ( support == "mousewheel" ) {
+							event.deltaY = - 1/40 * originalEvent.wheelDelta;
+							originalEvent.wheelDeltaX && ( event.deltaX = - 1/40 * originalEvent.wheelDeltaX );
+						} else {
+							event.deltaY = originalEvent.deltaY || originalEvent.detail;
+						}
+						return callback( event );
+					}, useCapture || false );
+				}
+			})(window,document);
+
 			const canvasWidth = 1280;
 			const canvasHeight = 720;
 
@@ -29,12 +80,20 @@
 			var investments;
 
 			function preload() {
+				game.load.audio('music', './Melancholic.mp3');
 				game.load.image('IDLogo', './VodLogo.png');
 				game.load.image('Background', './Background.png');
+				game.load.image('Bed', './Bed.png');
+				game.load.image('Bench', './Bench.png');
+				game.load.image('Computer', './Computer.png');
+				game.load.image('Door', './Door.png');
 				game.load.image('Grid', './GridBase.png');
+				game.load.image('vignette', './Vignette.png');
+				game.load.spritesheet('Button', './Generic.png', 572, 250);
 				game.load.json('activities', './activities.json');
 				game.load.json('sports', './sports.json');
 				game.load.json('investments', './investments.json');
+				game.load.atlas('Calender', 'Days/atlas.png', 'Days/atlas.json', Phaser.Loader.TEXTURE_ATLAS_JSON_HASH);
 			}
 			/**
 				"stockOption1": {
@@ -49,13 +108,27 @@
 			function invest(option, amount) {
 				let x = investments[option];
 				gameState.money -= x.cost * amount;
-				x.balance += x.cost * amount;
+				x.balance += amount;
+				for(let i = 1, l = investmentGroup.children.length - 2; i < l; ++i) {
+					let inv = investmentGroup.children[i];
+					if(inv.children[0].id == option) {
+						inv.children[2].children[1].text = (x.permanent ? "Donations: " : "Stocks: ") + x.balance;
+					}
+				}
+				money.text = "Money: $" + Math.floor(gameState.money);
 			}
 
 			function withdraw(option, amount) {
 				let x = investments[option];
-				gameState.money += Math.min(x.balance, amount);
+				gameState.money += Math.min(x.balance, amount) * x.cost;
 				x.balance -= Math.min(x.balance, amount);
+				for(let i = 1, l = investmentGroup.children.length - 2; i < l; ++i) {
+					let inv = investmentGroup.children[i];
+					if(inv.children[0].id == option) {
+						inv.children[2].children[1].text = (x.permanent ? "Donations: " : "Stocks: ") + x.balance;
+					}
+				}
+				money.text = "Money: $" + Math.floor(gameState.money);
 			}
 
 			/**
@@ -109,17 +182,41 @@
 			function playSport(sport) {
 				let x = sports[sport];
 				gameState.money -= x.cost;
-				if(gameState.injured || Math.random() < x.injuryChance) {
-					gameState.injured = true;
-				} else {
-					let happiness = x.baseHappiness
-													+ (x.novelty / (x.numCompleted + 1))
-													+ (x.numCompleted / x.social)
-													+ (x.rewarding ? (x.numCompleted/4) / x.rewarding : 0);
-					gameState.happiness += happiness;
+				if(!gameState.injured) {
+					if(Math.random() < x.injuryChance) {
+						gameState.injured = true;
+						notificationQueue[notificationQueue.length] = {
+							title: "Regarding your injury...",
+							message: "While it has been great to you getting out, your injury playing " + x.name + " has put a lot of unnecessary stress on your already compromised system. We suggest you refrain from such activities for at least a year.\n\nRespectfully,\nThe On-Site Medic."
+						};
+						for(let i = 1, l = sportGroup.children.length - 2; i < l; ++i) {
+							sportGroup.children[i].children[0].tint = 0x333333;
+							sportGroup.children[i].children[1].tint = 0x333333;
+						}
+					} else {
+						let happiness = x.baseHappiness
+														+ (x.novelty / (x.numCompleted + 1))
+														+ (x.numCompleted / x.social)
+														+ (x.rewarding ? (x.numCompleted/4) / x.rewarding : 0);
+						gameState.happiness += happiness;
+						let previousDays = gameState.daysTillDeath;
+						gameState.daysTillDeath += x.extendLife;
+						console.log(gameState.daysTillDeath - Math.floor(previousDays));
+						if(gameState.daysTillDeath - Math.floor(previousDays) >= 1) {
+							notificationQueue[notificationQueue.length] = {
+								title: "Update On Your Health",
+								message: "It seems that your sporting activities have successfully gained you a bit of extra time! Good to see you taking steps to prolong your time here.\n\nSincerely,\nYour Doctor."
+							};
+							++x.numCompleted;
+							passTime(1);
+							return false;
+						}
+					}
+					++x.numCompleted;
+					passTime(1);
+					return !gameState.injured;
 				}
-				++x.numCompleted;
-				passTime(1);
+				return false;
 			}
 
 			function passTime(days) {
@@ -130,16 +227,45 @@
 				if(gameState.happiness > 1000) {
 					console.log(daysSinceStart);
 				}
-				gameState.daysTillDeath += investments['research'].extendLife * (investments['research'].balance / investments['research'].cost);
+				animLocked = true;animFrames = 0;
+				happiness.text = "Happiness: " + Math.floor(gameState.happiness);
+				daysLeft.text = "Days Left: " + Math.floor(gameState.daysTillDeath);
+				money.text = "Money: $" + Math.floor(gameState.money);
+				let prevDays = gameState.daysTillDeath;
+				gameState.daysTillDeath += investments['research'].extendLife * investments['research'].balance;
+				console.log(gameState.daysTillDeath - Math.floor(prevDays));
+				if(gameState.daysTillDeath - Math.floor(prevDays) >= 1) {
+					notificationQueue[notificationQueue.length] = {
+						title: "Update on Your Prescription",
+						message: "Due to increased investment into treatments related to your condition, we expect you to last a few more days with the updated prescription. Do enjoy the extra time you've been given.\n\nSincerely,\nYour Doctor"
+					};
+				}
 				investments['research'].balance = 0;
 				for(let i = 1, l = Object.keys(investments).length; i < l; ++i) {
 					let key = Object.keys(investments)[i];
 					if(!investments[key].permanent) {
-						investments[key].balance += investments[key].balance * (Math.random() - investments[key].risk) * investments[key].baseInterestRate;
+						investments[key].cost += Math.round(investments[key].cost * (Math.random() - investments[key].risk) * investments[key].baseInterestRate);
 					}
+				}
+				for(let i = 1, l = investmentGroup.children.length - 2; i < l; ++i) {
+					let inv = investmentGroup.children[i];
+					inv.children[2].children[0].text = "Cost: " + investments[inv.children[0].id].cost;
+					inv.children[2].children[1].text = (investments[inv.children[0].id].permanent ? "Donations: " : "Stocks: ") + investments[inv.children[0].id].balance;
 				}
 				if(days > 1) {
 					passTime(days - 1);
+				} else if(notificationQueue.length > 0) {
+					currentScreen.visible = false;
+					currentScreen = notificationGroup;
+					notificationGroup.visible = true;
+					let queueItem = notificationQueue[0];
+					notificationGroup.children[2].text = queueItem.title;
+					notificationGroup.children[3].text = queueItem.message;
+					notificationQueue.splice(0,1);
+				} else {
+					currentScreen.visible = false;
+					currentScreen = false;
+					mousePos.visible = true;
 				}
 			}
 
@@ -159,7 +285,20 @@
 
 			var frameNo = 0;
 
+			var currentScreen = undefined;
+			var investmentGroup;
+			var activityGroup;
+			var sportGroup;
+			var notificationQueue = [];
+			var notificationGroup;
+
 			function create() {
+				addWheelListener(game.canvas, function(e) {
+					if(currentScreen.id == "activities") {
+						currentScreen.children[1].y = Math.max((-Object.keys(activities).length) * 280/3 - 140 + canvasHeight, Math.min(0, currentScreen.children[1].y - e.deltaY));
+						currentScreen.children[5].y = currentScreen.children[1].y/((-Object.keys(activities).length) * 280/3 - 140 + canvasHeight) * (canvasHeight - 177) * Math.min((canvasHeight-140) / (Object.keys(activities).length * 280/3), 1);
+					}
+				});
 				activities = game.cache.getJSON('activities');
 				sports = game.cache.getJSON('sports');
 				investments = game.cache.getJSON('investments');
@@ -167,19 +306,368 @@
 				background = game.add.sprite(0, 0, 'Background');
 				background.width = canvasWidth;
 				background.height = canvasHeight;
+				mousePos = game.add.graphics();
+				mousePos.beginFill(0xFFFFFF);
+				mousePos.lineTo(50.4, 22.6);
+				mousePos.lineTo(0, 45.2);
+				mousePos.lineTo(-50.4, 22.6);
+				//mousePos.lineTo(0, 0);
+				mousePos.endFill();
+				mousePos.alpha = 0;
+				mousePos.x = 200;
+				mousePos.y = 200;
+				mousePos.tint = 0x333333;
+				bench = game.add.sprite(0, 0, 'Bench');
+				bench.width = canvasWidth;
+				bench.height = canvasHeight;
+				computer = game.add.sprite(0, 0, 'Computer');
+				computer.width = canvasWidth;
+				computer.height = canvasHeight;
+				bed = game.add.sprite(0, 0, 'Bed');
+				bed.width = canvasWidth;
+				bed.height = canvasHeight;
+				door = game.add.sprite(0, 0, 'Door');
+				door.width = canvasWidth;
+				door.height = canvasHeight;
+				calender = game.add.sprite(0, 0, 'Calender');
+				calender.x = 400;
+				calender.y = 150;
+				calender.width = 90;
+				calender.height = 110;
 				grid = game.add.sprite(0, 0, 'Grid');
 				grid.width = canvasWidth;
 				grid.height = canvasHeight;
-				centerPoint = game.add.graphics();
+				grid.alpha = 0;
+				/**centerPoint = game.add.graphics();
 				centerPoint.beginFill(0xff0000);
 				centerPoint.drawCircle(0, 0, 5);
-				centerPoint.endFill();
+				centerPoint.endFill();**/
+				vignette = game.add.sprite(0, 0, 'vignette');
+				vignette.width = canvasWidth;
+				vignette.height = canvasHeight;
+				let statsStyle = {
+					fill: "#FFFFFF",
+					stroke: "black",
+					strokeThickness: 5,
+					shadowFill: true,
+					shadowStroke: true,
+					shadowColor: "black",
+					shadowOffsetX: 1,
+					shadowOffsetY: 1
+				};
+				happiness = game.add.text(20, 20, "Happiness: 20", statsStyle);
+				daysLeft = game.add.text(20, 50, "Days Left: 365", statsStyle);
+				money = game.add.text(20, 80, "Money: $" + Math.floor(gameState.money), statsStyle);
+				investmentGroup = createInvestmentGroup();
+				investmentGroup.visible = false;
+				activityGroup = createActivitiesGroup();
+				activityGroup.visible = false;
+				sportGroup = createSportGroup();
+				sportGroup.visible = false;
+				notificationGroup = createNotificationGroup();
+				currentScreen = notificationGroup;
 				logo = game.add.sprite(0, 0, 'IDLogo');
 				logo.age = 120;
 				leftKey = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
 				rightKey = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
 				upKey = game.input.keyboard.addKey(Phaser.Keyboard.UP);
 				downKey = game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
+				music = game.add.audio('music');
+				game.sound.setDecodedCallback([music], start, this);
+			}
+
+			function start() {
+				music.loopFull(0);
+			}
+
+			var notificationStyle = { font: "22px Arial", fill: "#FFFFFF", align: "left", stroke: "black", strokeThickness: 3, wordWrap: true, wordWrapWidth: 480 };
+
+			function createNotificationGroup() {
+				let res = game.add.group();
+				let bg = game.add.graphics();
+				bg.beginFill(0x000000);
+				bg.drawRect(0,0,canvasWidth, canvasHeight);
+				bg.alpha = 0.5;
+				bg.endFill();
+				res.add(bg);
+				let nbg = game.add.graphics();
+				nbg.beginFill(0x000000);
+				nbg.drawRect(canvasWidth/2 - 250,canvasHeight/2 - 250, 500, 500);
+				nbg.alpha = 0.5;
+				nbg.endFill();
+				res.add(nbg);
+				let title = game.add.text(canvasWidth/2 - 240,canvasHeight/2 - 240, "Dear Good Sir,", notificationStyle);
+				title.fontSize = 32;
+				res.add(title);
+				let text = game.add.text(canvasWidth/2 - 240,canvasHeight/2 - 190, "No doubt it came as a shock to find out you only have a year left to live, and we are deeply sorry you had to find out in the way you did.\n\nWe can only hope that in the next 365 days, you'll be able to find happiness in your remaining time on earth.\n\nRespectfully,\nThe Doctors of Korona Medical Care", notificationStyle);
+				text.fontSize = 18;
+				res.add(text);
+				let exit = game.add.button(640, canvasHeight/2 + 270 - (250/3), "Button", buttonClick, this, 0, 0, 1);
+				exit.anchor.set(0.5);
+				exit.width = 572/3;
+				exit.height = 250/3;
+				exit.id = "Ok";
+				res.add(exit);
+				let exitText = makeButtonText("Ok");
+				exitText.x = exit.x;
+				exitText.y = exit.y;
+				res.add(exitText);
+				return res;
+			}
+
+			function createActivitiesGroup() {
+				let res = game.add.group();
+				let scrollBg = game.add.graphics();
+				scrollBg.beginFill(0x000000);
+				scrollBg.drawRect(canvasWidth - 30, 20, 20, canvasHeight - 140);
+				scrollBg.endFill();
+				scrollBg.alpha = 0.3;
+				let scrollBar = game.add.graphics();
+				scrollBar.beginFill(0x000000);
+				scrollBar.drawRect(canvasWidth - 30, 20, 20, (canvasHeight - 140) * Math.min((canvasHeight-140) / (Object.keys(activities).length * 280/3), 1));
+				scrollBar.endFill();
+				scrollBar.alpha = 0.3;
+				scrollBar.inputEnabled = true;
+				scrollBar.input.enableDrag(true);
+				let scrollableRegion = game.add.group();
+				let mask = game.add.graphics();
+				mask.beginFill(0xFFFFFF);
+				mask.drawRect(20, 20, canvasWidth - 40, canvasHeight - 140);
+				mask.endFill();
+				scrollableRegion.mask = mask;
+				let back = game.add.group();
+				let bg = game.add.graphics();
+				bg.beginFill(0x000000);
+				bg.drawRect(0,0,canvasWidth, canvasHeight);
+				bg.alpha = 0.5;
+				bg.endFill();
+				let regionBg = game.add.graphics();
+				regionBg.beginFill(0x000000);
+				regionBg.drawRect(20, 20, canvasWidth - 55, canvasHeight - 140);
+				regionBg.endFill();
+				regionBg.alpha = 0.3;
+				back.add(bg);
+				back.add(regionBg);
+				res.add(back);
+				for(let i = 0, l = Object.keys(activities).length; i < l; ++i) {
+					let act = activities[Object.keys(activities)[i]];
+					let actGroup = game.add.group();
+					let desc = makeActDesc(act);
+					desc.x = 40;
+					desc.y = i * 280/3 + 70;
+					let actButton = game.add.button(0, 0, "Button", buttonClick, this, 0, 0, 1);
+					actButton.anchor.set(0.5);
+					actButton.x = canvasWidth - 572/6 - 50;
+					actButton.y = i * 280/3 + 65;
+					actButton.width = 572/3;
+					actButton.height = 250/3;
+					actButton.act = act;
+					actButton.id = Object.keys(activities)[i];
+					actButton.costType = "activity";
+					let actText = makeButtonText("Purchase");
+					actText.x = actButton.x;
+					actText.y = actButton.y;
+					actGroup.add(desc);
+					actGroup.add(actButton);
+					actGroup.add(actText);
+					scrollableRegion.add(actGroup);
+				}
+				res.add(scrollableRegion);
+				res.id = "activities";
+				let exit = game.add.button(20, 620, "Button", buttonClick, this, 0, 0, 1);
+				exit.width = 572/3;
+				exit.height = 250/3;
+				exit.id = "Exit";
+				res.add(exit);
+				let exitText = makeButtonText("Exit");
+				exitText.x = exit.x + exit.width/2;
+				exitText.y = exit.y + exit.height/2;
+				res.add(exitText);
+				res.add(scrollBg);
+				res.add(scrollBar);
+				return res;
+			}
+
+			function createSportGroup() {
+				let res = game.add.group();
+				let bg = game.add.graphics();
+				bg.beginFill(0x000000);
+				bg.drawRect(0,0,canvasWidth, canvasHeight);
+				bg.alpha = 0.5;
+				bg.endFill();
+				res.add(bg);
+				for(let i = 0, l = Object.keys(sports).length; i < l; ++i) {
+					let sport = sports[Object.keys(sports)[i]];
+					let buttonGroup = game.add.group();
+					let button = game.add.button(20, i * 280/3 + 20, "Button", buttonClick, this, 0, 0, 1);
+					button.width = 572/3;
+					button.height = 250/3;
+					button.id = Object.keys(sports)[i];
+					button.costType = "sport";
+					buttonGroup.add(button);
+					let buttonText = makeButtonText(sport.name);
+					buttonText.x = button.x + button.width/2;
+					buttonText.y = button.y + button.height/2;
+					buttonGroup.add(buttonText);
+					let descText = makeSportDescText(sport, Object.keys(sports)[i]);
+					descText.x = button.width + 20;
+					descText.y = button.y;
+					buttonGroup.add(descText);
+					res.add(buttonGroup);
+				}
+				let exit = game.add.button(20, 620, "Button", buttonClick, this, 0, 0, 1);
+				exit.width = 572/3;
+				exit.height = 250/3;
+				exit.id = "Exit";
+				res.add(exit);
+				let exitText = makeButtonText("Exit");
+				exitText.x = exit.x + exit.width/2;
+				exitText.y = exit.y + exit.height/2;
+				res.add(exitText);
+				return res;
+			}
+
+			function createInvestmentGroup() {
+				let res = game.add.group();
+				let bg = game.add.graphics();
+				bg.beginFill(0x000000);
+				bg.drawRect(0,0,canvasWidth, canvasHeight);
+				bg.alpha = 0.5;
+				bg.endFill();
+				res.add(bg);
+				for(let i = 0, l = Object.keys(investments).length; i < l; ++i) {
+					let invest = investments[Object.keys(investments)[i]];
+					let buttonGroup = game.add.group();
+					let button = game.add.button(20, i * 280/3 + 20, "Button", buttonClick, this, 0, 0, 1);
+					button.width = 572/3;
+					button.height = 250/3;
+					button.id = Object.keys(investments)[i];
+					button.costType = "invest";
+					buttonGroup.add(button);
+					let buttonText = makeButtonText(invest.name);
+					buttonText.x = button.x + button.width/2;
+					buttonText.y = button.y + button.height/2;
+					buttonGroup.add(buttonText);
+					let descText = makeDescriptionText(invest, Object.keys(investments)[i]);
+					descText.x = button.width + 20;
+					descText.y = button.y;
+					buttonGroup.add(descText);
+					res.add(buttonGroup);
+				}
+				let exit = game.add.button(20, 620, "Button", buttonClick, this, 0, 0, 1);
+				exit.width = 572/3;
+				exit.height = 250/3;
+				exit.id = "Exit";
+				res.add(exit);
+				let exitText = makeButtonText("Exit");
+				exitText.x = exit.x + exit.width/2;
+				exitText.y = exit.y + exit.height/2;
+				res.add(exitText);
+				return res;
+			}
+
+			function buttonClick(button) {
+				if(button.id == "Exit") {
+					currentScreen.visible = false;
+					currentScreen = false;
+					mousePos.visible = true;
+				} else if(button.costType == "invest") {
+					invest(button.id, 1);
+				} else if(button.costType == "activity") {
+					performActivity(button.id);
+				} else if(button.costType == "withdraw") {
+					withdraw(button.id, 1);
+				} else if(button.costType == "sport") {
+					let sport = playSport(button.id);
+					if(sport) {
+						currentScreen.visible = false;
+						currentScreen = false;
+						mousePos.visible = true;
+					}
+				} else if(button.id == "Ok") {
+					if(notificationQueue.length > 0) {
+						let queueItem = notificationQueue[0];
+						notificationGroup.children[2].text = queueItem.title;
+						notificationGroup.children[3].text = queueItem.message;
+						notificationQueue.splice(0,1);
+					} else {
+						currentScreen.visible = false;
+						currentScreen = false;
+						mousePos.visible = true;
+					}
+				}
+			}
+
+			var buttonStyle = { font: "28px Arial", fill: "#FFFFFF", wordWrap: true, wordWrapWidth: 572/3, align: "center", stroke: "black", strokeThickness: 3 };
+			var descriptionStyle = { font: "22px Arial", fill: "#FFFFFF", align: "left", stroke: "black", strokeThickness: 3 };
+			var actStyle = { font: "22px Arial", fill: "#FFFFFF", align: "left", stroke: "black", strokeThickness: 3, wordWrap: true, wordWrapWidth: 640};
+
+			function makeButtonText(text) {
+				let res = game.add.text(0, 0, text, buttonStyle);
+				res.shadowColor = "#000000";
+				res.shadowFill = true;
+				res.shadowStroke = true;
+				res.shadowOffsetX = 2;
+				res.shadowOffsetY = 2;
+				res.lineSpacing = -15;
+				res.anchor.set(0.5);
+				return res;
+			}
+
+			function makeActDesc(act) {
+				let desc = game.add.text(50, 100, act.name + " - $" + act.cost + "\nTakes " + act.time + (act.time > 1 ? " days." : " day."), actStyle);
+				desc.anchor.set(0, 0.5);
+				desc.lineSpacing = -8;
+				desc.shadowColor = "#000000";
+				desc.shadowFill = true;
+				desc.shadowStroke = true;
+				desc.shadowOffsetX = 1;
+				desc.shadowOffsetY = 1;
+				return desc;
+			}
+
+			function makeDescriptionText(info, id) {
+				let res = game.add.group();
+				let cost = game.add.text(0, 10, "Cost: $" + info.cost, descriptionStyle);
+				cost.shadowColor = "#000000";
+				cost.shadowFill = true;
+				cost.shadowStroke = true;
+				cost.shadowOffsetX = 1;
+				cost.shadowOffsetY = 1;
+				res.add(cost);
+				let stocks = game.add.text(0, 40, (info.permanent ? "Donations: " : "Stocks: ") + info.balance, descriptionStyle);
+				stocks.shadowColor = "#000000";
+				stocks.shadowFill = true;
+				stocks.shadowStroke = true;
+				stocks.shadowOffsetX = 1;
+				stocks.shadowOffsetY = 1;
+				res.add(stocks);
+				let withdraw = game.add.button(stocks.width + 5, 40, "Button", buttonClick, this, 0, 0, 1);
+				withdraw.width = 572/8;
+				withdraw.height = 250/8;
+				let withdrawText = makeButtonText("Withdraw");
+				withdrawText.fontSize = 14;
+				withdrawText.x = withdraw.x + withdraw.width/2;
+				withdrawText.y = withdraw.y + withdraw.height/2;
+				withdrawText.shadowOffsetX = 1;
+				withdrawText.shadowOffsetY = 1;
+				withdraw.costType = "withdraw";
+				withdraw.id = id;
+				res.add(withdraw);
+				res.add(withdrawText);
+				return res;
+			}
+
+			function makeSportDescText(info, id) {
+				let res = game.add.group();
+				let cost = game.add.text(0, 25, "Cost Per Match: $" + info.cost, descriptionStyle);
+				cost.shadowColor = "#000000";
+				cost.shadowFill = true;
+				cost.shadowStroke = true;
+				cost.shadowOffsetX = 1;
+				cost.shadowOffsetY = 1;
+				res.add(cost);
+				return res;
 			}
 
 			var init = false;
@@ -195,31 +683,90 @@
 
 		var activeX = -1;
 		var activeY = -1;
+		var mouseDown = false;
+		var animLocked = true;
+		var animFrames = 45;
 
 		function iterate() {
 			frameNo++;
-			for(let x = 0; x < 10; ++x) {
-				for(let y = 0; y < 10; ++y) {
-					let startX = 640 + 50.4*x - 50.4*y;
-					let startY = 233 + 22.6*y + 22.6*x;
-					let points = [
-						[startX, startY],
-						[startX + 50.4, startY + 22.6],
-						[startX, startY + 45.2],
-						[startX - 50.4, startY + 22.6],
-						[startX, startY]
-					];
-					if(inside([game.input.mousePointer.clientX, game.input.mousePointer.clientY], points)) {
-						activeX = x;
-						activeY = y;
+			vignette.alpha = (Math.sin(frameNo/80)/4 + 0.5);
+			if(animLocked) {
+				mousePos.alpha = 0;
+				animFrames += 1;
+				if(animFrames == 45) {
+					calender.animations.frame = (daysSinceStart % 32);
+				}
+				background.y = 0 - (animFrames > 44 ? 1440 : 0) + 1440 * (Math.min(animFrames, 90)/90);
+				bed.y = 0 - (animFrames > 49 ? 1440 : 0) + 1440 * Math.max(Math.min(animFrames - 5, 90)/90, 0);
+				door.y = 0 - (animFrames > 54 ? 1440 : 0) + 1440 * Math.max(Math.min(animFrames - 10, 90)/90, 0);
+				computer.y = 0 - (animFrames > 59 ? 1440 : 0) + 1440 * Math.max(Math.min(animFrames - 15, 90)/90, 0);
+				bench.y = 0 - (animFrames > 64 ? 1440 : 0) + 1440 * Math.max(Math.min(animFrames - 20, 90)/90, 0);
+				calender.y = 0 - (animFrames > 69 ? 1440 : 0) + 1440 * Math.max(Math.min(animFrames - 25, 90)/90, 0) + 150;
+				if(animFrames == 115) {
+					animLocked = false;
+				}
+			} else if(!currentScreen && !animLocked) {
+				if(game.input.mousePointer.isDown) {
+					console.log([game.input.mousePointer.clientX, game.input.mousePointer.clientY]);
+					console.log([activeX, activeY]);
+					mousePos.tint = 0xFF0000;
+					mouseDown = true;
+				} else {
+					if(mouseDown) {
+						mouseDown = false;
+						if((activeY == 7 || activeY == 8) && activeX == 0) {
+							currentScreen = investmentGroup;
+							currentScreen.visible = true;
+							mousePos.visible = false;
+						} else if((activeX == 4 || activeX == 5) && (activeY == 8 || activeY == 9)) {
+							currentScreen = activityGroup;
+							currentScreen.visible = true;
+							mousePos.visible = false;
+						} else if((activeY == 0 || activeY == 1 || activeY == 2) && activeX == 0) {
+							currentScreen = sportGroup;
+							currentScreen.visible = true;
+							mousePos.visible = false;
+						}
+					}
+					let foundActive = false;
+					for(let x = 0; x < 10; ++x) {
+						for(let y = 0; y < 10; ++y) {
+							let startX = 640 + 50.4*x - 50.4*y;
+							let startY = 233 + 22.6*y + 22.6*x;
+							let points = [
+								[startX, startY],
+								[startX + 50.4, startY + 22.6],
+								[startX, startY + 45.2],
+								[startX - 50.4, startY + 22.6],
+								[startX, startY]
+							];
+							if(inside([game.input.mousePointer.clientX, game.input.mousePointer.clientY], points)) {
+								activeX = x;
+								activeY = y;
+								foundActive = true;
+							}
+						}
+					}
+					if(foundActive) {
+						mousePos.tint = 0x333333;
+						mousePos.x = 640 + 50.4*activeX - 50.4*activeY;
+						mousePos.y = 233 + 22.6*activeY + 22.6*activeX;
+						mousePos.alpha = 0.7;
+					} else {
+						mousePos.alpha = 0;
+						activeX = -1;
+						activeY = -1;
 					}
 				}
+			} else if(!animLocked && currentScreen.id == "activities") {
+				currentScreen.children[5].x = 0;
+				if(currentScreen.children[5].py != currentScreen.children[5].y) {
+					currentScreen.children[5].y = Math.min((canvasHeight - 140) * Math.min((canvasHeight-140) / (Object.keys(activities).length * 280/3), 1) - 20, Math.max(0, currentScreen.children[5].y))
+					currentScreen.children[1].y = currentScreen.children[5].y * -1.920365783958849;
+				}
+				currentScreen.children[5].py = currentScreen.children[5].y;
 			}
-			if(game.input.mousePointer.isDown) {
-				console.log([game.input.mousePointer.clientX, game.input.mousePointer.clientY]);
-				console.log([activeX, activeY]);
-			}
-			game.stage.backgroundColor = Phaser.Color.interpolateColor(0x80E0F1, 0x2C4A4F, 900, Math.min(frameNo, 900));
+			//game.stage.backgroundColor = Phaser.Color.interpolateColor(0x80E0F1, 0x2C4A4F, 900, Math.min(frameNo, 900));
 		}
 
 			var logoVisible = true;
