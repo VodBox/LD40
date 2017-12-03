@@ -74,13 +74,6 @@
 				sport: undefined,
 				lossRate: 1
 			};
-			if(localStorage) {
-				let saved = JSON.parse(localStorage.getItem("gameState"));
-				if(saved != null && saved.happiness < 1000 && saved.daysTillDeath > 0) {
-					gameState = saved;
-					daysSinceStart = parseInt(localStorage.getItem("daysSinceStart"));
-				}
-			}
 
 			var activities;
 			var sports;
@@ -270,7 +263,16 @@
 					let key = Object.keys(investments)[i];
 					if(!investments[key].permanent) {
 						investments[key].cost += Math.round(investments[key].cost * (Math.random() - investments[key].risk) * investments[key].baseInterestRate);
+						if(daysSinceStart % 50 == 0) {
+							investments[key].cost *= 0.5;
+						}
 					}
+				}
+				if(daysSinceStart % 50 == 0) {
+					notificationQueue[notificationQueue.length] = {
+						title: "Stock Market Crash",
+						message: "Hopefully you haven't invested too much into stocks lately, because everything has seemingly dropped off at once!\n\nYour Financial Advisor"
+					};
 				}
 				for(let i = 1, l = investmentGroup.children.length - 2; i < l; ++i) {
 					let inv = investmentGroup.children[i];
@@ -298,6 +300,9 @@
 					if(localStorage) {
 						localStorage.setItem("gameState", JSON.stringify(gameState));
 						localStorage.setItem("daysSinceStart", daysSinceStart);
+						localStorage.setItem("activities", JSON.stringify(activities));
+						localStorage.setItem("sports", JSON.stringify(sports ));
+						localStorage.setItem("investments", JSON.stringify(investments));
 					}
 					currentScreen.visible = false;
 					currentScreen = false;
@@ -341,6 +346,16 @@
 				activities = game.cache.getJSON('activities');
 				sports = game.cache.getJSON('sports');
 				investments = game.cache.getJSON('investments');
+				if(localStorage) {
+					let saved = JSON.parse(localStorage.getItem("gameState"));
+					if(saved != null && saved.happiness < 1000 && saved.happiness > 0 && saved.money > 0 && saved.daysTillDeath > 0) {
+						gameState = saved;
+						daysSinceStart = parseInt(localStorage.getItem("daysSinceStart"));
+						activities = JSON.parse(localStorage.getItem("activities"));
+						sports = JSON.parse(localStorage.getItem("sports"));
+						investments = JSON.parse(localStorage.getItem("investments"));
+					}
+				}
 				game.stage.backgroundColor = 0x80E0F1;
 				background = game.add.sprite(0, 0, 'Background');
 				background.width = canvasWidth;
@@ -398,9 +413,6 @@
 				happiness = game.add.text(20, 20, "Happiness: " + Math.floor(gameState.happiness), statsStyle);
 				daysLeft = game.add.text(20, 50, "Days Left: " + Math.floor(gameState.daysTillDeath), statsStyle);
 				money = game.add.text(20, 80, "Money: $" + Math.floor(gameState.money), statsStyle);
-				happiness.alpha = 0;
-				daysLeft.alpha = 0;
-				money.alpha = 0;
 				investmentGroup = createInvestmentGroup();
 				investmentGroup.visible = false;
 				activityGroup = createActivitiesGroup();
@@ -408,8 +420,8 @@
 				sportGroup = createSportGroup();
 				sportGroup.visible = false;
 				notificationGroup = createNotificationGroup();
-				notificationGroup.visible = false;
-				//currentScreen = notificationGroup;
+				//notificationGroup.visible = false;
+				currentScreen = notificationGroup;
 				logo = game.add.sprite(0, 0, 'IDLogo');
 				logo.age = 120;
 				leftKey = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
